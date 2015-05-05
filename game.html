@@ -1,0 +1,216 @@
+<!doctype html>
+<html>
+	<head>
+		<script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.11.2.min.js"></script>
+		<script src="lib/typescript-1.5beta.js"></script>
+		<script src="lib/marked.js"></script>
+		<script>
+			"use strict";
+			var importer = {
+				importedCount : 1,
+				importDone : null,
+				decrementImportedCount : function() {
+					this.importedCount--;
+					if (this.importDone != null && this.importedCount == 0)
+						this.importDone();
+				},
+				onImportDone : function(fn) {
+					this.importDone = fn;
+					this.decrementImportedCount();
+				},
+				importScriptFile : function(fileName, type) {
+					this.importedCount++;
+					var parent = this;
+					$.get(fileName, function(data) {
+						var s = $('<script><' + '/script>')
+							.attr('type', type)
+							.attr('filename', fileName)
+							.text(data);
+						$('head').append(s);
+						parent.decrementImportedCount();
+					});
+				},
+				importTweeTs : function(fileName) {
+					this.importScriptFile(fileName, 'twee.ts');
+				},
+				importTsSrc : function (fileName) {
+					this.importScriptFile(fileName, 'typescript');
+				}
+			};
+		</script>
+		<script>
+			function compileTs(files)
+			{
+				"use strict";
+				var compilerHost = {
+					getSourceFile: function(fileName, langVersion) {
+						var s = $("script[type='typescript'][filename='" + fileName + "']").first();
+						return ts.createSourceFile(fileName, s.text(), langVersion);
+					},
+					getDefaultLibFileName : function(options) {
+						return "lib/lib.d-1.5beta.ts";
+					},
+					writeFile : function(fileName, data, bom) {
+						var s = $('<script><' + '/script>').text(data).attr('filename', fileName);
+						$('head').append(s);
+					},
+					getCurrentDirectory : function() {
+						return '';
+					},
+					getCanonicalFileName : function(fileName) {
+						return fileName;
+					},
+					useCaseSensitiveFileNames : function() {
+						return true;
+					},
+					getNewLine : function() {
+						return '\n';
+					}
+				};
+				var tsCompilation = ts.createProgram(files,
+					{noEmitOnError: true, noImplicitAny: true,
+					target: ts.ScriptTarget.ES5,
+					module: ts.ModuleKind.CommonJS,
+					out: 'transpiled.js'},
+					compilerHost);
+				var result = tsCompilation.emit();
+				var diagnostics = ts.getPreEmitDiagnostics(tsCompilation).concat(result.diagnostics);
+				diagnostics.forEach(function(diagnostic) {
+					var lineChar = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start);
+						var message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
+						console.log(diagnostic.file.fileName +  ' (' + (lineChar.line + 1) + ':' + (lineChar.character + 1) + '): ' + message); 
+					});
+			}
+		</script>
+		<script>
+			var tweeTsToTs = {
+				compile : function () {
+					var parent = this;
+					var scripts = $("script[type='twee.ts']")
+					//	.filter(function(idx, el) { return $.inArray(el.getAttribute('filename'), files); });
+						.each(function(idx, el) {
+							parent.tweeTsLex(el.textContent);
+						});
+				},
+				tweeTsLex : function(text)
+				{
+					var pos = 0;
+					var passageLine = null;
+					var passageText = '';
+					// TODO: some scheme to allow for comments that span across passages so taht
+					//    you can easily comment out passages
+					while(true) {
+						var newLine = text.indexOf("\n", pos);
+						var line = (newLine < 0 ? text.substring(pos) : text.substring(pos, newLine + 1));
+						
+						if (line.trim().indexOf("::") == 0)
+						{
+							this.handlePassage(passageLine, passageText);
+							passageLine = line;
+							passageText = '';
+						}
+						else
+						{
+							passageText += line;
+						}
+						console.log(line);
+						
+						if (newLine < 0) break;
+						pos = newLine + 1;
+					}
+					this.handlePassage(passageLine, passageText);
+				},
+				handlePassage : function(passageLine, passage) {
+					// Parse the name of the passage and its tags
+					if (passageLine == null) return;
+					var match = /\s*::\s*(\S[^\[]*)(.*)/.exec(passageLine);
+					if (!match) return;
+					var passageName = match[1];
+					var tags = [];
+					var rest = match[2];
+					var tagRegex = /\s*\[([^\]]*)\](.*)/;
+					match = tagRegex.exec(rest);
+					while (match)
+					{
+						tags.push(match[1]);
+						rest = match[2];
+						match = tagRegex.exec(rest);
+					}
+					
+					function strEscape(str) { return str.replace('\\', '\\\\').replace('"', '\\"').replace("\n", '\\n"\n+"').replace("\r", "\\r"); }
+					var substituted = '';
+					var pos = 0;
+					
+					// Match whitespace at the beginning so that we can trim it from the Markdown output 
+					// (but we preserve the lines in the output to ensure that line numbers approximately match)
+					var whitespaceRegex = /\s*/g;
+					match = whitespaceRegex.exec(passage);
+					pos = whitespaceRegex.lastIndex;
+					for (var n = 0; n < match[0].split("\n").length - 1; n++) substituted += '\n';
+					
+					// Do the templating stuff
+					substituted += 'var _$_ = ""; _$_ += "';
+					
+					var templateRegex = /<%(.*?)%>/g;
+					templateRegex.lastIndex = pos;
+					match = templateRegex.exec(passage);
+					while (match != null) {
+						substituted += strEscape(passage.substring(pos, match.index));
+						var contents = match[1];
+						if (contents.length > 0 && contents.charAt(0) == '=') {
+							if (contents.length > 1 && contents.charAt(1) == '=')  {
+								substituted += '" + (' + contents.substring(2) + ') + "';
+							} else {
+								substituted += '" + htmlEscape(' + contents.substring(1) + ') + "';
+							}
+						} else {
+							substituted += '"; ' + contents + ';_$_ += "';
+						}
+						pos = templateRegex.lastIndex;
+						match = templateRegex.exec(passage);
+					}
+					// Trim whitespace at the end from the Markdown output 
+					// (but we preserve the lines in the output to ensure that line numbers approximately match)
+					var whitespaceEndRegex = /(.*?)(\s*)$/g;
+					whitespaceEndRegex.lastIndex = pos;
+					match = whitespaceEndRegex.exec(passage);
+					substituted += strEscape(match[1]) + '";';
+					for (var n = 0; n < match[2].split("\n").length - 1; n++) substituted += '\n';
+					
+					console.log(passageName);
+					console.log(tags);
+					console.log(substituted);
+				}
+				
+				
+			};
+		</script>
+		
+		<script>
+			importer.importTsSrc('lib/lib.d-1.5beta.ts');
+			importer.onImportDone(function() {
+				//compileTs(['_.ts']);
+			});
+			$(document).ready(function() {
+				tweeTsToTs.compile();
+			});
+		</script>
+		
+		<script type="twee.ts">
+		
+		:: Passage1 [start] [SomeOtherTag]
+		<% var b = 'John'; %>
+		Hello, how are you, <%=b%>?
+		
+		:: Passage2
+		
+		2nd passage
+		</script>
+<script type="typescript" filename="_.ts">
+alert('hi');
+
+</script>
+	</head>
+	<body>
+	</body>
+</html>
