@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 	<head>
-		<script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.11.2.min.js"></script>
+		<script src="lib/jquery-1.11.3.min.js"></script>
 		<script src="lib/typescript-1.5beta.js"></script>
 		<script src="lib/marked.js"></script>
 		<script>
@@ -84,20 +84,32 @@
 		</script>
 		<script>
 			var tweeTsToTs = {
+				passageNames : [],
 				compile : function () {
+					var untitledCount = 0;
 					var parent = this;
 					var scripts = $("script[type='twee.ts']")
 					//	.filter(function(idx, el) { return $.inArray(el.getAttribute('filename'), files); });
 						.each(function(idx, el) {
-							parent.tweeTsLex(el.textContent);
+							var fileName = el.getAttribute('filename');
+							if (!fileName) 
+							{
+								untitledCount++;
+								fileName = '_' + untitledCount;
+							}
+							var s = $('<script><' + '/script>')
+								.attr('type', 'typescript')
+								.attr('filename', fileName + '.ts');
+							$('head').append(s);
+							parent.tweeTsLex(el.textContent, s);
 						});
 				},
-				tweeTsLex : function(text)
+				tweeTsLex : function(text, outputElement)
 				{
 					var pos = 0;
 					var passageLine = null;
 					var passageText = '';
-					// TODO: some scheme to allow for comments that span across passages so taht
+					// TODO: some scheme to allow for comments that span across passages so that
 					//    you can easily comment out passages
 					while(true) {
 						var newLine = text.indexOf("\n", pos);
@@ -105,7 +117,7 @@
 						
 						if (line.trim().indexOf("::") == 0)
 						{
-							this.handlePassage(passageLine, passageText);
+							this.handlePassage(passageLine, passageText, outputElement);
 							passageLine = line;
 							passageText = '';
 						}
@@ -118,14 +130,15 @@
 						if (newLine < 0) break;
 						pos = newLine + 1;
 					}
-					this.handlePassage(passageLine, passageText);
+					this.handlePassage(passageLine, passageText, outputElement);
+					
 				},
-				handlePassage : function(passageLine, passage) {
+				handlePassage : function(passageLine, passage, outputElement) {
 					// Parse the name of the passage and its tags
 					if (passageLine == null) return;
 					var match = /\s*::\s*(\S[^\[]*)(.*)/.exec(passageLine);
 					if (!match) return;
-					var passageName = match[1];
+					var passageName = match[1].trim();
 					var tags = [];
 					var rest = match[2];
 					var tagRegex = /\s*\[([^\]]*)\](.*)/;
@@ -175,24 +188,34 @@
 					whitespaceEndRegex.lastIndex = pos;
 					match = whitespaceEndRegex.exec(passage);
 					substituted += strEscape(match[1]) + '";';
-					for (var n = 0; n < match[2].split("\n").length - 1; n++) substituted += '\n';
+					for (var n = 0; n < match[2].split("\n").length - 2; n++) substituted += '\n';
 					
-					console.log(passageName);
-					console.log(tags);
-					console.log(substituted);
+					var passageCode =  'passages.push(new Passage("' + strEscape(passageName) + '", '
+						+ 'function() {\n'
+						+ substituted
+						+ '}));\n';
+						
+					this.passageNames.push(passageName);
+					outputElement.append(passageCode);
+					
+//					console.log(passageName);
+//					console.log(tags);
+//					console.log(substituted);
 				}
-				
-				
 			};
 		</script>
 		
 		<script>
 			importer.importTsSrc('lib/lib.d-1.5beta.ts');
-			importer.onImportDone(function() {
-				//compileTs(['_.ts']);
-			});
 			$(document).ready(function() {
-				tweeTsToTs.compile();
+				importer.onImportDone(function() {
+					//compileTs(['_.ts']);
+					tweeTsToTs.compile();
+					// Gather all the typescript files for compilation
+					var tsFiles = $("script[type='typescript']").map(
+						function(idx, el) {return el.getAttribute('filename');});
+					compileTs(tsFiles);
+				});
 			});
 		</script>
 		
