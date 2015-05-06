@@ -4,8 +4,9 @@ declare var marked : any;
 
 
 class Passage {
-    constructor(public name : string, public codename: string, public code :() => string) {
+    constructor(public name : string, public codename: string) {
     }
+	run() : string { return ''; }
 }
 
 var passages : Passage[] = [];
@@ -20,8 +21,9 @@ const TWINETS_FUNCTION_SCHEMA = 'twine.ts+function:';
 class Story {
 	startPassageName: string = 'Start';
 	passageMap: { [key:string]:Passage } = {};
+	currentPassage: Passage = null;
 	
-	constructor() {
+	init() {
 		// Make a proper map of all the passages
 		passages.forEach((passage) => {
 			this.passageMap[passage.name] = passage;
@@ -61,8 +63,10 @@ class Story {
 	}
 	
 	show(passage : Passage) : void {
+		this.currentPassage = passage;
+	
 		// Run the passage code to get the Markdown to show
-		var text = passage.code();
+		var text = passage.run();
 		
 		// Render the Markdown and put it onto the web page
 		$("#passage").html(this.parseMarkdown(text, ''));
@@ -86,14 +90,22 @@ class Story {
 	}
 }
 
-var story : Story;
+var story : Story = new Story();
 
 function startGame() : void
 {
-	story = new Story();
-	story.show(story.passageMap[story.startPassageName]);
+	story.init();
+	story.show(story.findPassage(story.startPassageName));
 }
 
 // Make sure all other initialization code has run first 
 // before starting up the engine
 setTimeout(() => { startGame(); }, 0);
+
+// Various library helper functions that can be called from game code
+
+function passage() : Passage
+{
+	return story.currentPassage;
+}
+

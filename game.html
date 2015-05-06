@@ -10,11 +10,18 @@
 			importer.importTsSrc('lib/lib.d-1.5beta.ts');
 			importer.importTsSrc('lib/jquery.d.ts');
 			importer.importTsSrc('lib/runtime.ts');
+			
+			// Add other imports here for your actual game code
 		</script>
-		
-<script type="twee.ts">
+
+		<!-- 
+		You can embed your Twee.ts and Typescript code directly in this web
+		page or put them in external files that will be imported at runtime. 
+		-->
+		<script type="twee.ts">
 
 					:: Passage1 [start] [SomeOtherTag]
+					<%= passage().name %>
 					<% var b = 'John'; %>
 					Hello, how are you, <%=b%>?
 
@@ -24,14 +31,16 @@
 					</script>
 					<script type="twee.ts">
 					::Start
+					<%= passage().name %>
 					This is where things start
 					
 					[[Go to first passage -> Passage1]]
-					</script>		
-<script type="typescript" data-filename="_.ts">
-// You can put Typescript code for initializing your game directly here (or in external Typescript files)
+		</script>		
+		<script type="typescript" data-filename="_.ts">
+			// You can put Typescript code for initializing your game
+			//  directly here (or in external Typescript files)
 
-</script>
+		</script>
 	</head>
 	<body>
 	<div id="passage">
