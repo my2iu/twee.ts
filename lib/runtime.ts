@@ -53,6 +53,7 @@ const TWINETS_FUNCTION_SCHEMA = 'twine.ts+function:';
 class Story {
 	startPassageName: string = 'Start';
 	passageMap: { [key:string]:Passage } = {};
+	visitedPassages: { [key:string]:boolean } = {};
 	currentPassage: Passage = null;
 	previousPassage : Passage = null;
 	
@@ -99,6 +100,7 @@ class Story {
 	show(passage : Passage) : void {
 		this.previousPassage = this.currentPassage;
 		this.currentPassage = passage;
+		this.visitedPassages[passage.name] = true;
 	
 		// Run the passage code to get the Markdown to show
 		var text = passage.run();
@@ -147,5 +149,10 @@ function passage() : Passage
 function previous() : Passage
 {
 	return story.previousPassage;
+}
+
+function visited(passage: Passage) : boolean
+{
+	return story.visitedPassages[passage.name];
 }
 
