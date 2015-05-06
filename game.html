@@ -148,7 +148,7 @@
 						match = tagRegex.exec(rest);
 					}
 					
-					function strEscape(str) { return str.replace('\\', '\\\\').replace('"', '\\"').replace("\n", '\\n"\n+"').replace("\r", "\\r"); }
+					function strEscape(str) { return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n"\n+"').replace(/\r/g, '\\r'); }
 					var substituted = '';
 					var pos = 0;
 					
@@ -195,7 +195,7 @@
 						+ '; return _$_;}));\n';
 						
 					this.passageNames.push(passageName);
-					outputElement.append(passageCode);
+					outputElement.append(document.createTextNode(passageCode));
 					
 //					console.log(passageName);
 //					console.log(tags);
@@ -247,6 +247,8 @@
 					<script type="twee.ts">
 					::Start
 					This is where things start
+					
+					[[Go to first passage -> Passage1]]
 					</script>		
 <script type="typescript" filename="_.ts">
 // You can put Typescript code for initializing your game directly here (or in external Typescript files)

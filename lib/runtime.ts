@@ -14,8 +14,10 @@ function htmlEscape(str : string) : string {
 	return $("<div>").text(str).html();
 }
 
+const TWINETS_PASSAGE_SCHEMA = 'twine.ts+passage:';
+
 class Story {
-	startPassageName: string = 'Passage1';//'Start';
+	startPassageName: string = 'Start';
 	passageMap: { [key:string]:Passage } = {};
 	
 	constructor() {
@@ -25,14 +27,21 @@ class Story {
 		});
 	}
 	
-	parseMarkdown(text) {
+	parseMarkdown(text : string, passageBase : string) :string {
 		var lexer = new marked.Lexer();
 		
-		// Do an initial pass over the code to handle Twine Harlowe-style links
-		text.replace(/\[\[(.*?)\]\]/g, function(match, link) {
+		// Do an initial pass over the code to find Twine Harlowe-style links and
+		// rewrite them into a special html link.
+		text = text.replace(/\[\[(.*?)\]\]/g, function(match, link) {
 			var dest = link;
 			var anchorText = link;
-			return '<a href="' + anchorText + '">' + anchorText + '</a>';
+			var split = link.split('->');
+			if (split.length > 0) {
+				dest = split[1];
+				anchorText = split[0];
+			}
+			dest = dest.trim();
+			return '<a href="' + TWINETS_PASSAGE_SCHEMA + dest + '" twinetsbase="' + passageBase + '">' + anchorText + '</a>';
 		});
 		
 		// Disable the handling of 4 spaces at the front of a line meaning
@@ -42,9 +51,37 @@ class Story {
 		return marked.parser(lexer.lex(text));
 	}
 	
-	show(passage : Passage) {
+	findPassage(name: string) : Passage {
+		return this.passageMap[name];
+	}
+	
+	canonicalizePassageName(base: string, name: string) : string {
+		return name;
+	}
+	
+	show(passage : Passage) : void {
+		// Run the passage code to get the Markdown to show
 		var text = passage.code();
-		$("#passage").html(this.parseMarkdown(text));
+		
+		// Render the Markdown and put it onto the web page
+		$("#passage").html(this.parseMarkdown(text, ''));
+		
+		// Rewrite any links to hide where they go to and to properly trigger a new passage
+		$("#passage a[href]").each((idx, el) => {
+			var href = el.getAttribute('href');
+			if (href && href.indexOf(TWINETS_PASSAGE_SCHEMA) == 0) {
+				let passageDest = href.substring(TWINETS_PASSAGE_SCHEMA.length);
+				let passageBase = el.getAttribute('twinetsbase');
+				if (passageBase == null) passageBase = '';
+				let fullPassageName = this.canonicalizePassageName(passageBase, passageDest);
+				let passage = story.findPassage(fullPassageName);
+				el.setAttribute('href', 'javascript:void(0)');
+				(<HTMLAnchorElement>el).onclick = (evt) => {
+					story.show(passage);
+				};
+				
+			}
+		});
 	}
 }
 
