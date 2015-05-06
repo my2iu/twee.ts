@@ -4,9 +4,41 @@ declare var marked : any;
 
 
 class Passage {
-    constructor(public name : string, public codename: string) {
+    constructor(public name : string, public codename: string, public tags: string[]) {
     }
 	run() : string { return ''; }
+	hasTag(name: string) : boolean { 
+		for (let n = 0; n < this.tags.length; n++)
+			if (this.tags[n] == name) 
+				return true;
+		return false;
+	}
+	hasTagNameValue(name: string) : boolean {
+		for (let n = 0; n < this.tags.length; n++)
+		{
+			var equal = this.tags[n].indexOf('=');
+			if (equal >= 0)
+			{
+				var key = this.tags[n].substring(0, equal);
+				var value = this.tags[n].substring(equal + 1);
+				if (key.trim() == name) return true;
+			}
+		}
+		return false;
+	}
+	getTagValue(name: string) : string {
+		for (let n = 0; n < this.tags.length; n++)
+		{
+			var equal = this.tags[n].indexOf('=');
+			if (equal >= 0)
+			{
+				var key = this.tags[n].substring(0, equal);
+				var value = this.tags[n].substring(equal + 1);
+				if (key.trim() == name) return value.trim();
+			}
+		}
+		return null;
+	}
 }
 
 var passages : Passage[] = [];
@@ -22,6 +54,7 @@ class Story {
 	startPassageName: string = 'Start';
 	passageMap: { [key:string]:Passage } = {};
 	currentPassage: Passage = null;
+	previousPassage : Passage = null;
 	
 	init() {
 		// Make a proper map of all the passages
@@ -38,10 +71,11 @@ class Story {
 		text = text.replace(/\[\[(.*?)\]\]/g, function(match, link) {
 			var dest = link;
 			var anchorText = link;
-			var split = link.split('->');
-			if (split.length > 0) {
-				dest = split[1];
-				anchorText = split[0];
+			let arrowPos = link.indexOf('->');
+			if (arrowPos >= 0)
+			{
+				dest = link.substring(arrowPos + 2);
+				anchorText = link.substring(0, arrowPos);
 			}
 			dest = dest.trim();
 			return '<a href="' + TWINETS_PASSAGE_SCHEMA + dest + '" twinetsbase="' + passageBase + '">' + anchorText + '</a>';
@@ -63,6 +97,7 @@ class Story {
 	}
 	
 	show(passage : Passage) : void {
+		this.previousPassage = this.currentPassage;
 		this.currentPassage = passage;
 	
 		// Run the passage code to get the Markdown to show
@@ -107,5 +142,10 @@ setTimeout(() => { startGame(); }, 0);
 function passage() : Passage
 {
 	return story.currentPassage;
+}
+
+function previous() : Passage
+{
+	return story.previousPassage;
 }
 

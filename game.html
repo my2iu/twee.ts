@@ -20,8 +20,10 @@
 		-->
 		<script type="twee.ts">
 
-					:: Passage1 [start] [SomeOtherTag]
-					<%= passage().name %>
+					:: Passage1 [start] [SomeOtherTag] [tag = test]
+					<%= passage().name %> from <%= previous().name %>
+					<%= this.hasTag('start') %>
+					<%= this.getTagValue('tag') %>
 					<% var b = 'John'; %>
 					Hello, how are you, <%=b%>?
 
