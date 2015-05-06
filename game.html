@@ -39,7 +39,7 @@
 			};
 		</script>
 		<script>
-			function compileTs(files)
+			function compileTs(files, errorReporter)
 			{
 				"use strict";
 				var compilerHost = {
@@ -52,6 +52,9 @@
 					},
 					writeFile : function(fileName, data, bom) {
 						var s = $('<script><' + '/script>').text(data).attr('filename', fileName);
+						// Append a filename comment at the end so that Chrome will show
+						// the file in the debugger
+						s.append('\n//@ sourceURL=' + fileName);
 						$('head').append(s);
 					},
 					getCurrentDirectory : function() {
@@ -68,18 +71,14 @@
 					}
 				};
 				var tsCompilation = ts.createProgram(files,
-					{noEmitOnError: true, noImplicitAny: true,
+					{noEmitOnError: true, noImplicitAny: false,
 					target: ts.ScriptTarget.ES5,
 					module: ts.ModuleKind.CommonJS,
 					out: 'transpiled.js'},
 					compilerHost);
 				var result = tsCompilation.emit();
-				var diagnostics = ts.getPreEmitDiagnostics(tsCompilation).concat(result.diagnostics);
-				diagnostics.forEach(function(diagnostic) {
-					var lineChar = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start);
-						var message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
-						console.log(diagnostic.file.fileName +  ' (' + (lineChar.line + 1) + ':' + (lineChar.character + 1) + '): ' + message); 
-					});
+				result.diagnostics = ts.getPreEmitDiagnostics(tsCompilation).concat(result.diagnostics);
+				return result;
 			}
 		</script>
 		<script>
@@ -125,7 +124,6 @@
 						{
 							passageText += line;
 						}
-						console.log(line);
 						
 						if (newLine < 0) break;
 						pos = newLine + 1;
@@ -190,10 +188,11 @@
 					substituted += strEscape(match[1]) + '";';
 					for (var n = 0; n < match[2].split("\n").length - 2; n++) substituted += '\n';
 					
-					var passageCode =  'passages.push(new Passage("' + strEscape(passageName) + '", '
+					var passageCode =  'passages.push(new Passage("' + strEscape(passageName)+ '", '
+						+ '"' + strEscape(passageName) + '", '
 						+ 'function() {\n'
 						+ substituted
-						+ '}));\n';
+						+ '; return _$_;}));\n';
 						
 					this.passageNames.push(passageName);
 					outputElement.append(passageCode);
@@ -207,33 +206,55 @@
 		
 		<script>
 			importer.importTsSrc('lib/lib.d-1.5beta.ts');
+			importer.importTsSrc('lib/jquery.d.ts');
+			importer.importTsSrc('lib/runtime.ts');
 			$(document).ready(function() {
 				importer.onImportDone(function() {
-					//compileTs(['_.ts']);
 					tweeTsToTs.compile();
+					
 					// Gather all the typescript files for compilation
 					var tsFiles = $("script[type='typescript']").map(
 						function(idx, el) {return el.getAttribute('filename');});
-					compileTs(tsFiles);
+					var result = compileTs(tsFiles);
+					for (var n = 0; n < result.diagnostics.length; n++)
+					{
+						var diagnostic = result.diagnostics[n];
+						var lineChar = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start);
+						var message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
+						var messageLine = diagnostic.file.fileName +  ' (' + (lineChar.line + 1) + ':' + (lineChar.character + 1) + '): ' + message; 
+						if (result.emitSkipped) {
+							// Log errors right to the main window
+							$('#passage').append($("<div>").text(messageLine));
+						} else {
+							// We were able to compile successfully, so just log warnings to console
+							console.log(messageLine);
+						}
+					}
 				});
 			});
 		</script>
 		
-		<script type="twee.ts">
-		
-		:: Passage1 [start] [SomeOtherTag]
-		<% var b = 'John'; %>
-		Hello, how are you, <%=b%>?
-		
-		:: Passage2
-		
-		2nd passage
-		</script>
+<script type="twee.ts">
+
+					:: Passage1 [start] [SomeOtherTag]
+					<% var b = 'John'; %>
+					Hello, how are you, <%=b%>?
+
+					:: Passage2
+
+					2nd passage
+					</script>
+					<script type="twee.ts">
+					::Start
+					This is where things start
+					</script>		
 <script type="typescript" filename="_.ts">
-alert('hi');
+// You can put Typescript code for initializing your game directly here (or in external Typescript files)
 
 </script>
 	</head>
 	<body>
+	<div id="passage">
+	</div>
 	</body>
 </html>
