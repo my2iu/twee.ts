@@ -15,6 +15,7 @@ function htmlEscape(str : string) : string {
 }
 
 const TWINETS_PASSAGE_SCHEMA = 'twine.ts+passage:';
+const TWINETS_FUNCTION_SCHEMA = 'twine.ts+function:';
 
 class Story {
 	startPassageName: string = 'Start';
