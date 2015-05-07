@@ -20,37 +20,40 @@
 		-->
 		<script type="twee.ts">
 
-					:: Passage1 [start] [SomeOtherTag] [tag = test]
+					:: /sub/Passage1 [start] [SomeOtherTag] [tag = test]
 					<%= passage().name %> from <%= previous().name %>
 					<%= this.hasTag('start') %>
 					<%= this.getTagValue('tag') %>
-					visited Start: <%= visited(book.Start) %> Passage1: <%= visited(book.Passage1) %> Passage2: <%= visited(book.Passage2) %>
+					visited Start: <%= visited(book.Start) %> Passage1: <%= visited(book.sub.Passage1) %> Passage2: <%= visited(book.sub.Passage2) %>
 					<% var b = 'John'; %>
 					Hello, how are you, <%=b%>?
 
 					<% include(book._3rd_passage); %>
-					:: Passage2
+					:: sub/Passage2
 
-					2nd passage [[3rd passage]]
+					2nd passage [[/3rd passage]]
 					:: 3rd passage
 					3rd passage code
+					
+					[[ Back to start -> /Start]]
 				</script>
 				<script type="twee.ts">
 					::Start
 					<%= passage().name %>
 					This is where things start
 					
-					[[Go to first passage -> Passage1]]
+					[[Go to first passage -> sub/Passage1]]
 					
-					<% fallthrough(book.AlternateStart) %>
+					<% fallthrough(book.sub2.sub3.AlternateStart) %>
 					
-					:: AlternateStart
+					:: sub2/sub3///AlternateStart
 					alternate start
+					[[ relativePath -> ../../sub/Passage2]]
 				</script>		
 		<script type="typescript" data-filename="_.ts">
 			// You can put Typescript code for initializing your game
 			//  directly here (or in external Typescript files)
-
+			story.addLoadListener( () => { story.hideLinks = false; } );
 		</script>
 	</head>
 	<body>

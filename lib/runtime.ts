@@ -66,6 +66,8 @@ class Story {
 	visitedPassages: { [key:string]:boolean } = {};
 	currentPassage: Passage = null;
 	previousPassage : Passage = null;
+	hideLinks = true;
+	loadListeners : Array<()=> void> = [];
 
 	/**
 	 * When we started this "turn" with the user clicking on something, what was
@@ -90,9 +92,11 @@ class Story {
 		});
 	}
 	
-	parseMarkdown(text : string, passageBase : string) :string {
-		var lexer = new marked.Lexer();
-		
+	addLoadListener(fn: ()=> void) {
+		this.loadListeners.push(fn);
+	}
+	
+	prefilterMarkdown(text : string, passageBase : string) : string {
 		// Do an initial pass over the code to find Twine Harlowe-style links and
 		// rewrite them into a special html link.
 		text = text.replace(/\[\[(.*?)\]\]/g, function(match, link) {
@@ -107,6 +111,11 @@ class Story {
 			dest = dest.trim();
 			return '<a href="' + TWINETS_PASSAGE_SCHEMA + dest + '" twinetsbase="' + passageBase + '">' + anchorText + '</a>';
 		});
+		return text;
+	}
+	
+	parseMarkdown(text : string) :string {
+		var lexer = new marked.Lexer();
 		
 		// Disable the handling of 4 spaces at the front of a line meaning
 		// a code block because you might have inlined some stuff that inserts
@@ -120,7 +129,23 @@ class Story {
 	}
 	
 	canonicalizePassageName(base: string, name: string) : string {
-		return name;
+		// If it's an absolute path, then use the root as the base path
+		if (name[0] == '/') base = '';
+		
+		// Discard the name of the passage in the base, leaving only its directory
+		let basePathComponents = base.split('/');
+		basePathComponents.pop();
+
+		let pathComponents = name.split('/');
+		for (var n = 0; n < pathComponents.length; n++)
+		{
+			var path = pathComponents[n];
+			if (path == '') continue;  // Ignore double slashes: '//'
+			if (path == '..') { basePathComponents.pop(); continue; }
+			basePathComponents.push(path);
+		}
+		
+		return basePathComponents.join('/');
 	}
 	
 	currentPassageOutput() : PassageOutput {
@@ -138,9 +163,11 @@ class Story {
 		} finally {
 			this.passageOutputStack.pop();
 		}
+		output.output = this.prefilterMarkdown(output.output, passage.name);
 		return output;
 	}
 	
+	// TODO: Find a better name than "show"
 	show(passage : Passage) : void {
 		this.previousFirstCurrentPassage = this.firstCurrentPassage;
 		this.previousPassage = this.currentPassage;
@@ -152,7 +179,7 @@ class Story {
 		var text = output.output;
 		
 		// Render the Markdown and put it onto the web page
-		$("#passage").html(this.parseMarkdown(text, ''));
+		$("#passage").html(this.parseMarkdown(text));
 		
 		// Rewrite any links to hide where they go to and to properly trigger a new passage
 		$("#passage a[href]").each((idx, el) => {
@@ -163,9 +190,11 @@ class Story {
 				if (passageBase == null) passageBase = '';
 				let fullPassageName = this.canonicalizePassageName(passageBase, passageDest);
 				let passage = story.findPassage(fullPassageName);
-				el.setAttribute('href', 'javascript:void(0)');
+				if (this.hideLinks)
+					el.setAttribute('href', 'javascript:void(0)');
 				(<HTMLAnchorElement>el).onclick = (evt) => {
 					story.show(passage);
+					evt.preventDefault();
 				};
 				
 			}
@@ -178,6 +207,9 @@ var story : Story = new Story();
 function startGame() : void
 {
 	story.init();
+	for (var n = 0; n < story.loadListeners.length; n++) {
+		story.loadListeners[n]();
+	}
 	story.show(story.findPassage(story.startPassageName));
 }
 
