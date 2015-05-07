@@ -4,7 +4,7 @@ declare var marked : any;
 
 
 class Passage {
-    constructor(public name : string, public codename: string, public tags: string[]) {
+    constructor(public name : string, public tags: string[]) {
     }
 	run(_$_: PassageOutput) : void { }
 	hasTag(name: string) : boolean { 
@@ -130,7 +130,7 @@ class Story {
 	
 	canonicalizePassageName(base: string, name: string) : string {
 		// If it's an absolute path, then use the root as the base path
-		if (name[0] == '/') base = '';
+		if (name[0] == '/') base = '/';
 		
 		// Discard the name of the passage in the base, leaving only its directory
 		let basePathComponents = base.split('/');
@@ -210,7 +210,10 @@ function startGame() : void
 	for (var n = 0; n < story.loadListeners.length; n++) {
 		story.loadListeners[n]();
 	}
-	story.show(story.findPassage(story.startPassageName));
+	let startPassageName = story.canonicalizePassageName('/', story.startPassageName);
+	let startPassage = story.findPassage(startPassageName);
+	if (startPassage == null) throw Error('Cannot find start passage ' + startPassageName);
+	story.show(startPassage);
 }
 
 // Make sure all other initialization code has run first 

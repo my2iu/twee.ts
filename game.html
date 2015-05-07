@@ -28,6 +28,7 @@
 					<% var b = 'John'; %>
 					Hello, how are you, <%=b%>?
 
+					[[2nd passage -> <%= this.p.Passage2.name %>]]
 					<% include(book._3rd_passage); %>
 					:: sub/Passage2
 
@@ -36,6 +37,11 @@
 					3rd passage code
 					
 					[[ Back to start -> /Start]]
+					[[a/b/extraPassage]]
+					
+					::: [module=/a/b]
+					::extraPassage
+					[[Back to start -> ../../Start]]
 				</script>
 				<script type="twee.ts">
 					::Start
