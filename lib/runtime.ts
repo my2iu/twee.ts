@@ -67,7 +67,13 @@ class Story {
 	currentPassage: Passage = null;
 	previousPassage : Passage = null;
 	hideLinks = true;
+	allowUndo = true;
 	loadListeners : Array<()=> void> = [];
+
+	// Members related to saving and checkpointing
+	createSaveHandler: () => any = null;
+	restoreSaveHandler: (any) => void = null;
+	lastValidCheckpoint: string = null;
 
 	/**
 	 * When we started this "turn" with the user clicking on something, what was
@@ -94,6 +100,51 @@ class Story {
 	
 	addLoadListener(fn: ()=> void) {
 		this.loadListeners.push(fn);
+	}
+	
+	registerSaveHandlers(save: () => any, restore: (any) => void) {
+		this.createSaveHandler = save;
+		this.restoreSaveHandler = restore;
+	}
+	
+	/**
+	 * Create a JSON object with the current story state.
+	 * I can think of two ways of saving the state. 
+	 * 1. We can save the screen output and all the variables. This can cause
+	 *    problems if we can't fully save the screen output with its links and 
+	 *    embedded code
+	 * 2. Save the current passage name, and the variables before the passage was
+	 *    shown. This can cause problems if there are things shown on the screen 
+	 *    that aren't recreated just be reshowing the passage or if the passage does
+	 *    different things each time it's run due to randomness.
+	 * Here, I'm using approach #2.
+	 */
+	createCheckpoint(passageName: string): string {
+		if (!this.createSaveHandler) return null;
+		var checkpoint = {
+			passage: passageName,
+			state: this.createSaveHandler(),
+			visited: this.visitedPassages,
+		};
+		return JSON.stringify(checkpoint);
+	}
+	
+	restoreCheckpoint(checkpoint: string) {
+		if (!this.restoreSaveHandler) return;
+		if (checkpoint == null) return;
+		var json = JSON.parse(checkpoint);
+		if (json == null) return;
+		if (!json.passage) return;
+		
+		// Assume we have a valid checkpoint
+		this.visitedPassages = json.visited;
+		this.restoreSaveHandler(json.state);
+		
+		// Prevents us from resaving the just restored state as a checkpoint
+		this.lastValidCheckpoint = null;
+		
+		// Replay the passage that was shown in that checkpoint
+		this.show(this.findPassage(json.passage));
 	}
 	
 	prefilterMarkdown(text : string, passageBase : string) : string {
@@ -173,6 +224,13 @@ class Story {
 		this.previousPassage = this.currentPassage;
 		this.firstCurrentPassage = passage;
 		this.currentPassage = passage;
+		
+		// Saving is difficult because some actions can't be recreated by Twee.ts.
+		// At the start of every action, Twee.ts will create a checkpoint, but it
+		// won't know if the checkpoint is for a passage that can be replayed until
+		// after the passage is run. If the checkpoint is found to be valid, it will 
+		// be saved as a valid checkpoint.
+		let attemptedCheckpoint = this.createCheckpoint(passage.name);
 	
 		// Run the passage code to get the Markdown to show
 		let output = this.runPassage(passage);
@@ -199,10 +257,28 @@ class Story {
 				
 			}
 		});
+		
+		// See if the checkpoint we created is for a valid point that we can
+		// replay from. If so, then store the checkpoint as a possible save state
+		if (attemptedCheckpoint != null)
+		{
+			if (this.lastValidCheckpoint != null && this.allowUndo) 
+			{
+				// Store the checkpoint
+				history.replaceState(this.lastValidCheckpoint);
+				// Advance to a new entry (which may be invalid, but we'll replace it later)
+				history.pushState(attemptedCheckpoint);
+			}
+			this.lastValidCheckpoint = attemptedCheckpoint;
+		}
 	}
 }
 
 var story : Story = new Story();
+
+window.onpopstate = (evt) => {
+	story.restoreCheckpoint(evt.state);
+}
 
 function startGame() : void
 {

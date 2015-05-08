@@ -16,13 +16,27 @@
 
 		<script type="typescript" data-filename="_.ts">
 			// You can put Typescript code for initializing your game
-			//  directly here (or in external Typescript files)
+			// directly here (or in external Typescript files)
 			story.addLoadListener( () => { story.hideLinks = false; } );
+			
+			// It's usually best to stick all your game variables inside
+			// a single object so that it's easy to save and restore it
+			var s = {
+				numTimesAtStart : 0,
+			};
+			
+			// Here, you tell Twee.Ts how to save your game's variables. In
+			// this case it's easy since all of your variables are already 
+			// in one place
+			story.registerSaveHandlers(
+				() => { return s; },     // save s
+				(save) => { s = save; }  // restore s from save
+			);
 		</script>
 		
 		<!-- 
-		You can embed your Twee.ts code directly in this web page below or put 
-		them in external files that will be imported at runtime. 
+		You can embed your Twee.ts code directly in this web page below or 
+		put them in external files that will be imported at runtime. 
 		-->
 		<script type="twee.ts">
 
@@ -52,7 +66,9 @@
 				<script type="twee.ts">
 					::Start
 					<%= passage().name %>
-					This is where things start
+					This is where things start.
+					<% s.numTimesAtStart++; %> 
+					We've been at the Start <%= s.numTimesAtStart %> times.
 					
 					[[Go to first passage -> sub/Passage1]]
 					
