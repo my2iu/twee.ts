@@ -1,7 +1,10 @@
 // Declare the external Markdown processor
 
 declare var marked : any;
-
+interface ITweeTsHelpers {
+	canonicalizePassageName : (base: string, name: string) => string;
+}
+declare var tweeTsHelpers: ITweeTsHelpers;
 
 class Passage {
     constructor(public name : string, public tags: string[]) {
@@ -41,8 +44,6 @@ class Passage {
 	}
 }
 
-var passages : Passage[] = [];
-
 function htmlEscape(str : any) : string {
 	return $("<div>").text('' + str).html();
 }
@@ -52,11 +53,26 @@ const TWINETS_FUNCTION_SCHEMA = 'twine.ts+function:';
 
 class PassageOutput {
 	output : string = '';
+	tags : string[] = [];
 	out(str: any) {
 		this.output += '' + str;
 	}
 	mergeIn(merge: PassageOutput) {
 		this.output += merge.output;
+	}
+	appendTagsFrom(tags: string[]) : void {
+		for (var n = 0; n < this.tags.length; n++)
+			this.tags.push(tags[n]);
+	}
+	copyTagsFrom(tags: string[]) : void {
+		this.tags = [];
+		this.appendTagsFrom(tags);
+	}
+	hasTag(tag: string) : boolean {
+		for (let n = 0; n < this.tags.length; n++)
+			if (this.tags[n] == name) 
+				return true;
+		return false;
 	}
 }
 
@@ -93,9 +109,18 @@ class Story {
 	
 	init() {
 		// Make a proper map of all the passages
-		passages.forEach((passage) => {
-			this.passageMap[passage.name] = passage;
-		});
+		this.indexPassage(book);
+	}
+	
+	indexPassage(passageModule : any) {
+		for (var key in passageModule) {
+			if (passageModule[key] instanceof Passage) {
+				let passage = passageModule[key];
+				this.passageMap[passage.name] = passage;
+			} else {
+				this.indexPassage(passageModule[key]);
+			}
+		}
 	}
 	
 	addLoadListener(fn: ()=> void) {
@@ -180,23 +205,7 @@ class Story {
 	}
 	
 	canonicalizePassageName(base: string, name: string) : string {
-		// If it's an absolute path, then use the root as the base path
-		if (name[0] == '/') base = '/';
-		
-		// Discard the name of the passage in the base, leaving only its directory
-		let basePathComponents = base.split('/');
-		basePathComponents.pop();
-
-		let pathComponents = name.split('/');
-		for (var n = 0; n < pathComponents.length; n++)
-		{
-			var path = pathComponents[n];
-			if (path == '') continue;  // Ignore double slashes: '//'
-			if (path == '..') { basePathComponents.pop(); continue; }
-			basePathComponents.push(path);
-		}
-		
-		return basePathComponents.join('/');
+		return tweeTsHelpers.canonicalizePassageName(base, name);
 	}
 	
 	currentPassageOutput() : PassageOutput {
@@ -208,6 +217,7 @@ class Story {
 		this.visitedPassages[passage.name] = true;
 		
 		let output = new PassageOutput();
+		output.copyTagsFrom(passage.tags);
 		this.passageOutputStack.push(output);
 		try {
 			passage.run(output);
@@ -264,10 +274,20 @@ class Story {
 		{
 			if (this.lastValidCheckpoint != null && this.allowUndo) 
 			{
-				// Store the checkpoint
+				// We've clicked a link and navigated to a new passage.
+				// Store the checkpoint (not really necessary since we've probably
+				// called replaceState() or pushState() already with the same checkpoint).
 				history.replaceState(this.lastValidCheckpoint);
-				// Advance to a new entry (which may be invalid, but we'll replace it later)
+				// Advance to a new entry
 				history.pushState(attemptedCheckpoint);
+			}
+			else
+			{
+				// We've either just started or have restored from a previous
+				// checkpoint, so just update the current state so that if the 
+				// browser is closed (or if back is chosen then forward again),
+				// we can restart at this point in the game
+				history.replaceState(attemptedCheckpoint);
 			}
 			this.lastValidCheckpoint = attemptedCheckpoint;
 		}
@@ -313,15 +333,18 @@ function visited(passage: Passage) : boolean
 	return story.visitedPassages[passage.name];
 }
 
-function include(passage: Passage) : void
+function include(passage: Passage) : PassageOutput
 {
 	// Get the current output context
 	var output = story.runPassage(passage);
 	story.currentPassageOutput().mergeIn(output);
+	return output;
 }
 
-function fallthrough(passage: Passage) : void
+function fallthrough(passage: Passage) : PassageOutput
 {
 	story.currentPassage = passage;
-	include(passage);
+	var output = include(passage);
+	story.currentPassageOutput().copyTagsFrom(output.tags);
+	return output;
 }
