@@ -6,7 +6,7 @@ It is inspired by Twine/Twee and its Snowman story format. Unlike Twine/Twee, Tw
 
 * it uses Markdown for text so that you don't have to spend as much time managing linebreaks in your programs. This also gives you more flexibility in formatting your code to be easier to read.
 * passages can be organized into namespace hierarchies, making it easier to organize your passages without having to worry about clashing names
-* Typescript is used as the underlying scripting engine, giving you the option of letting the computer automatically check your code for errors. You no longer have to worry about misspelling variables. You can use more descriptive types like enumerations to organize your program.
+* Typescript is used as the underlying scripting engine. Although Typescript can be used exactly like normal JavaScript, it also gives you the option of letting the computer automatically check your code for errors. You no longer have to worry about misspelling variables. You can use more descriptive types like enumerations to organize your program.
 * the main game engine provides hooks to allow you to easily customize its behavior
 * a passage can "fall through" to another passage, providing an easy mechanism for programmatically deciding how one passage should flow to the next
 * the engine allows you to save and replay transcripts, making testing easier
