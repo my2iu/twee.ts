@@ -61,7 +61,7 @@ class PassageOutput {
 		this.output += merge.output;
 	}
 	appendTagsFrom(tags: string[]) : void {
-		for (var n = 0; n < this.tags.length; n++)
+		for (var n = 0; n < tags.length; n++)
 			this.tags.push(tags[n]);
 	}
 	copyTagsFrom(tags: string[]) : void {
@@ -70,7 +70,7 @@ class PassageOutput {
 	}
 	hasTag(tag: string) : boolean {
 		for (let n = 0; n < this.tags.length; n++)
-			if (this.tags[n] == name) 
+			if (this.tags[n] == tag) 
 				return true;
 		return false;
 	}
@@ -230,6 +230,7 @@ class Story {
 	
 	// TODO: Find a better name than "show"
 	show(passage : Passage) : void {
+		if (passage == null) return;
 		this.previousFirstCurrentPassage = this.firstCurrentPassage;
 		this.previousPassage = this.currentPassage;
 		this.firstCurrentPassage = passage;
@@ -247,7 +248,16 @@ class Story {
 		var text = output.output;
 		
 		// Render the Markdown and put it onto the web page
-		$("#passage").html(this.parseMarkdown(text));
+		var innerHTML = this.parseMarkdown(text);
+		if (output.hasTag('silent'))
+		{
+			// Do not show the output
+			output.tags.push("nocheckpoint");
+		}
+		else
+		{
+			$("#passage").html(innerHTML);
+		}
 		
 		// Rewrite any links to hide where they go to and to properly trigger a new passage
 		$("#passage a[href]").each((idx, el) => {
@@ -270,7 +280,7 @@ class Story {
 		
 		// See if the checkpoint we created is for a valid point that we can
 		// replay from. If so, then store the checkpoint as a possible save state
-		if (attemptedCheckpoint != null)
+		if (attemptedCheckpoint != null && !output.hasTag('nocheckpoint'))
 		{
 			if (this.lastValidCheckpoint != null && this.allowUndo) 
 			{
