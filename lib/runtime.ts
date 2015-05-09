@@ -44,6 +44,11 @@ class Passage {
 	}
 }
 
+interface PassageModule {
+	_passages : Passage[];
+	_submodules : PassageModule[];
+}
+
 function htmlEscape(str : any) : string {
 	return $("<div>").text('' + str).html();
 }
@@ -112,14 +117,13 @@ class Story {
 		this.indexPassage(book);
 	}
 	
-	indexPassage(passageModule : any) {
-		for (var key in passageModule) {
-			if (passageModule[key] instanceof Passage) {
-				let passage = passageModule[key];
-				this.passageMap[passage.name] = passage;
-			} else {
-				this.indexPassage(passageModule[key]);
-			}
+	indexPassage(passageModule : PassageModule) {
+		for (let n = 0; n < passageModule._passages.length; n++) {
+			let passage = passageModule._passages[n];
+			this.passageMap[passage.name] = passage;
+		}
+		for (let n = 0; n < passageModule._submodules.length; n++) {
+			this.indexPassage(passageModule._submodules[n]);
 		}
 	}
 	
