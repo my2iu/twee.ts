@@ -59,6 +59,7 @@ const TWINETS_FUNCTION_SCHEMA = 'twine.ts+function:';
 class PassageOutput {
 	output : string = '';
 	tags : string[] = [];
+	renderedHtml : string = null;
 	out(str: any) {
 		this.output += '' + str;
 	}
@@ -90,6 +91,8 @@ class Story {
 	hideLinks = true;
 	allowUndo = true;
 	loadListeners : Array<()=> void> = [];
+	
+	displayOutputHandlers : Array<(markdown: PassageOutput) => boolean> = [];
 
 	// Members related to saving and checkpointing
 	createSaveHandler: () => any = null;
@@ -115,6 +118,21 @@ class Story {
 	init() {
 		// Make a proper map of all the passages
 		this.indexPassage(book);
+		
+		// Add some default handlers for processing output
+		this.displayOutputHandlers.push(
+			// Default handler for putting all the output in the passage html
+			(output : PassageOutput) : boolean => {
+				$("#passage").html(output.renderedHtml);
+				return true;
+			});
+		this.displayOutputHandlers.push(
+			// Handler that ignores passages marked as silent
+			(output : PassageOutput) : boolean => {
+				if (!output.hasTag('silent'))
+					return false;
+				return true;
+			});
 	}
 	
 	indexPassage(passageModule : PassageModule) {
@@ -249,18 +267,14 @@ class Story {
 	
 		// Run the passage code to get the Markdown to show
 		let output = this.runPassage(passage);
-		var text = output.output;
 		
 		// Render the Markdown and put it onto the web page
-		var innerHTML = this.parseMarkdown(text);
-		if (output.hasTag('silent'))
-		{
-			// Do not show the output
-			output.tags.push("nocheckpoint");
-		}
-		else
-		{
-			$("#passage").html(innerHTML);
+		output.renderedHtml = this.parseMarkdown(output.output);
+		for (let n = this.displayOutputHandlers.length - 1; n >= 0; n--) {
+			// Find the right display handler for displaying a passage with 
+			// its combination of tags
+			if (this.displayOutputHandlers[n](output)) 
+				break;
 		}
 		
 		// Rewrite any links to hide where they go to and to properly trigger a new passage
@@ -362,3 +376,8 @@ function fallthrough(passage: Passage) : PassageOutput
 	story.currentPassageOutput().copyTagsFrom(output.tags);
 	return output;
 }
+
+//function popup(passage: Passage) : void
+//{
+//	var output = story.runPassage(passage);
+//}
