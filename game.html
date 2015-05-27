@@ -57,7 +57,7 @@
 					::2nd passage expander [silent]
 					<% $("#passage .secondPassageBefore").addClass('hidden');
 					$("#passage .secondPassageAfter").removeClass('hidden');
-					//popup(book._2nd_passage_popup);
+					popup(book._2nd_passage_popup);
 					%>
 					::2nd passage popup
 					Pop up!
@@ -72,6 +72,8 @@
 					::: [module=/a/b]
 					::extraPassage
 					[[Back to start -> ../../Start]]
+					::popup! [popup]
+					Popped Up!
 				</script>
 				<script type="twee.ts">
 					::Start
@@ -83,6 +85,9 @@
 					[[Go to first passage -> sub/Passage1]]
 					
 					<% fallthrough(book.sub2.sub3.AlternateStart) %>
+
+					[[popup -> /a/b/popup!]]
+
 					
 					:: sub2/sub3///AlternateStart
 					alternate start

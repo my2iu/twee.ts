@@ -127,6 +127,14 @@ class Story {
 				return true;
 			});
 		this.displayOutputHandlers.push(
+			// Handler for popup passages
+			(output : PassageOutput) : boolean => {
+				if (!output.hasTag('popup'))
+					return false;
+				this.popup(output.renderedHtml);
+				return true;
+			});
+		this.displayOutputHandlers.push(
 			// Handler that ignores passages marked as silent
 			(output : PassageOutput) : boolean => {
 				if (!output.hasTag('silent'))
@@ -135,6 +143,10 @@ class Story {
 			});
 	}
 	
+	/**
+	 * Go through all the passages and put them in a dictionary indexed
+	 * by passage name so that it's easier to find them.
+	 */
 	indexPassage(passageModule : PassageModule) {
 		for (let n = 0; n < passageModule._passages.length; n++) {
 			let passage = passageModule._passages[n];
@@ -226,6 +238,10 @@ class Story {
 		return this.passageMap[name];
 	}
 	
+	/**
+	 * Returns a full passage name based on the current passage and a relative
+	 * path name
+	 */
 	canonicalizePassageName(base: string, name: string) : string {
 		return tweeTsHelpers.canonicalizePassageName(base, name);
 	}
@@ -249,7 +265,19 @@ class Story {
 		output.output = this.prefilterMarkdown(output.output, passage.name);
 		return output;
 	}
-	
+
+	/**
+	 * Displays some HTML in a "popup" window over the passage text
+	 */
+	popup(html: string) : void {
+		let popup = $('<div class="popup"></div>');
+		popup.html(html);
+		let popupClose = $('<div class="popupClose"><a href="javascript:void(0)">X</a></div>');
+		popup.append(popupClose);
+		$('a', popupClose).click( (evt) => popup.remove() );
+		$("#passage").append(popup);
+	}
+
 	// TODO: Find a better name than "show"
 	show(passage : Passage) : void {
 		if (passage == null) return;
@@ -268,8 +296,10 @@ class Story {
 		// Run the passage code to get the Markdown to show
 		let output = this.runPassage(passage);
 		
-		// Render the Markdown and put it onto the web page
+		// Render the Markdown to html
 		output.renderedHtml = this.parseMarkdown(output.output);
+		
+		// Put the html up in the passage section (or wherever it should be displayed)
 		for (let n = this.displayOutputHandlers.length - 1; n >= 0; n--) {
 			// Find the right display handler for displaying a passage with 
 			// its combination of tags
@@ -305,9 +335,9 @@ class Story {
 				// We've clicked a link and navigated to a new passage.
 				// Store the checkpoint (not really necessary since we've probably
 				// called replaceState() or pushState() already with the same checkpoint).
-				history.replaceState(this.lastValidCheckpoint);
+				history.replaceState(this.lastValidCheckpoint, '');
 				// Advance to a new entry
-				history.pushState(attemptedCheckpoint);
+				history.pushState(attemptedCheckpoint, '');
 			}
 			else
 			{
@@ -315,7 +345,7 @@ class Story {
 				// checkpoint, so just update the current state so that if the 
 				// browser is closed (or if back is chosen then forward again),
 				// we can restart at this point in the game
-				history.replaceState(attemptedCheckpoint);
+				history.replaceState(attemptedCheckpoint, '');
 			}
 			this.lastValidCheckpoint = attemptedCheckpoint;
 		}
@@ -377,7 +407,9 @@ function fallthrough(passage: Passage) : PassageOutput
 	return output;
 }
 
-//function popup(passage: Passage) : void
-//{
-//	var output = story.runPassage(passage);
-//}
+function popup(passage: Passage) : void
+{
+	var output = story.runPassage(passage);
+	output.renderedHtml = story.parseMarkdown(output.output);
+	story.popup(output.renderedHtml);
+}
