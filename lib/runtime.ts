@@ -139,6 +139,7 @@ class Story {
 				if (!output.hasTag('popup'))
 					return false;
 				this.popup(output.renderedHtml);
+				output.copyTagsFrom(['nocheckpoint']);
 				return true;
 			});
 		this.displayOutputHandlers.push(
@@ -146,6 +147,7 @@ class Story {
 			(output : PassageOutput) : boolean => {
 				if (!output.hasTag('silent'))
 					return false;
+				output.copyTagsFrom(['nocheckpoint']);
 				return true;
 			});
 	}
