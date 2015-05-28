@@ -3,6 +3,7 @@
 declare var marked : any;
 interface ITweeTsHelpers {
 	canonicalizePassageName : (base: string, name: string) => string;
+	getBadLinksReport : ( logger: (text: string) => void ) => boolean;
 }
 declare var tweeTsHelpers: ITweeTsHelpers;
 
@@ -89,6 +90,7 @@ class Story {
 	currentPassage: Passage = null;
 	previousPassage : Passage = null;
 	hideLinks = true;
+	ignoreBadLinks = false;
 	allowUndo = true;
 	loadListeners : Array<()=> void> = [];
 	
@@ -99,6 +101,11 @@ class Story {
 	restoreSaveHandler: (any) => void = null;
 	lastValidCheckpoint: string = null;
 
+	// Keeps track of functions that can be linked back into the text later
+	functionLinkCount = 0;
+	functionLinkMap : { [key:number]:()=>void } = {};
+	runAfterFunctions : Array<()=>void> = [];
+	
 	/**
 	 * When we started this "turn" with the user clicking on something, what was
 	 * the currentPassage? (Later on, we might have fallen through to another passage,
@@ -164,6 +171,17 @@ class Story {
 	registerSaveHandlers(save: () => any, restore: (any) => void) {
 		this.createSaveHandler = save;
 		this.restoreSaveHandler = restore;
+	}
+
+	/**
+	 * Starts the game out by showing the first passage.
+	 */
+	showFirstPassage() : void {
+		// Start showing the first passage
+		let startPassageName = this.canonicalizePassageName('/', story.startPassageName);
+		let startPassage = this.findPassage(startPassageName);
+		if (startPassage == null) throw Error('Cannot find start passage ' + startPassageName);
+		this.show(startPassage);
 	}
 	
 	/**
@@ -322,9 +340,27 @@ class Story {
 					story.show(passage);
 					evt.preventDefault();
 				};
-				
+			} else if (href && href.indexOf(TWINETS_FUNCTION_SCHEMA) == 0) {
+				let functionNumber = parseInt(href.substring(TWINETS_FUNCTION_SCHEMA.length));
+				let fun = this.functionLinkMap[functionNumber];
+				if (this.hideLinks)
+					el.setAttribute('href', 'javascript:void(0)');
+				(<HTMLAnchorElement>el).onclick = (evt) => {
+					fun();
+					evt.preventDefault();
+				};
 			}
 		});
+		
+		// Run all the code that should be run after everything is rendered
+		for (let n = 0; n < this.runAfterFunctions.length; n++) {
+			this.runAfterFunctions[n]();
+		}
+		this.runAfterFunctions.length = 0;
+		
+		// Clear the map of functions since all of them should be linked into the 
+		// html by now, so we don't need to keep the mapping of IDs to functions
+		this.functionLinkMap = {};
 		
 		// See if the checkpoint we created is for a valid point that we can
 		// replay from. If so, then store the checkpoint as a possible save state
@@ -361,13 +397,28 @@ window.onpopstate = (evt) => {
 function startGame() : void
 {
 	story.init();
-	for (var n = 0; n < story.loadListeners.length; n++) {
+	
+	// Run initial listeners for when the game starts
+	for (let n = 0; n < story.loadListeners.length; n++) {
 		story.loadListeners[n]();
 	}
-	let startPassageName = story.canonicalizePassageName('/', story.startPassageName);
-	let startPassage = story.findPassage(startPassageName);
-	if (startPassage == null) throw Error('Cannot find start passage ' + startPassageName);
-	story.show(startPassage);
+	
+	// Show any bad links found
+	let areAllLinksOk = tweeTsHelpers.getBadLinksReport( (text) => {
+		if (!story.ignoreBadLinks) {
+			let logline = $('<div></div>').append(text);
+			$('#passage').append(logline);
+		} else {
+			console.log(text);
+		}
+	});
+	if (!areAllLinksOk && !story.ignoreBadLinks) {
+		let ok = $('<div><a href="javascript:void(0)">Continue</a></div>');
+		$('#passage').append(ok);
+		$('a', ok).click( (evt) => story.showFirstPassage() );
+	} else {
+		story.showFirstPassage();
+	}
 }
 
 // Make sure all other initialization code has run first 
@@ -412,4 +463,17 @@ function popup(passage: Passage) : void
 	var output = story.runPassage(passage);
 	output.renderedHtml = story.parseMarkdown(output.output);
 	story.popup(output.renderedHtml);
+}
+
+function fnlink(fun : () => void) : string
+{
+	let funNum = story.functionLinkCount;
+	story.functionLinkCount++;
+	story.functionLinkMap[funNum] = fun;
+	return TWINETS_FUNCTION_SCHEMA + funNum;
+}
+
+function runAfter(fun : () => void) : void
+{
+	story.runAfterFunctions.push(fun);
 }

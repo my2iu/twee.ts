@@ -87,7 +87,17 @@
 					<% fallthrough(book.sub2.sub3.AlternateStart) %>
 
 					[[popup -> /a/b/popup!]]
+					
+					[popup function](<%=fnlink(()=>popup(book.a.b.popup_))%>)
+					
+					[[alert]]
+					
+					[[bad link]]
 
+					::alert
+					<%runAfter(() => alert('alert'))%>
+					
+					[[Start]]
 					
 					:: sub2/sub3///AlternateStart
 					alternate start
