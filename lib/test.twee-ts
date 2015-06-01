@@ -1,0 +1,63 @@
+
+					:: /sub/Passage1 [start] [SomeOtherTag] [tag = test]
+					<%= passage().name %> from <%= previous().name %>
+					<%= this.hasTag('start') %>
+					<%= this.getTagValue('tag') %>
+					visited Start: <%= visited(book.Start) %> Passage1: <%= visited(book.sub.Passage1) %> Passage2: <%= visited(book.sub.Passage2) %>
+					    
+					  <% var b = 'John'; %>
+					Hello, how are you, <%=b%>?
+
+					[[2nd passage -> <%= this.p.Passage2.name %>]]
+					<% include(book._3rd_passage); %>
+					:: sub/Passage2
+
+					<span class="secondPassageBefore">[[2nd passage->/2nd passage expander]]</span> <span class="secondPassageAfter hidden">The 2nd passage contains a link that when clicked replaces the content with longer content</span> [[/3rd passage]]
+					::2nd passage expander [silent]
+					<% $("#passage .secondPassageBefore").addClass('hidden');
+					$("#passage .secondPassageAfter").removeClass('hidden');
+					popup(book._2nd_passage_popup);
+					%>
+					::2nd passage popup
+					Pop up!
+					
+					And more
+					:: 3rd passage
+					3rd passage code
+					
+					[[ Back to start -> /Start]]
+					[[a/b/extraPassage]]
+					
+					::: [module=/a/b]
+					::extraPassage
+					[[Back to start -> ../../Start]]
+					::popup! [popup]
+					Popped Up!
+
+::: [module=/]
+					::Start
+					<%= passage().name %>
+					This is where things start.
+					<% s.numTimesAtStart++; %> 
+					We've been at the Start <%= s.numTimesAtStart %> times.
+					
+					[[Go to first passage -> sub/Passage1]]
+					
+					<% fallthrough(book.sub2.sub3.AlternateStart) %>
+
+					[[popup -> /a/b/popup!]]
+					
+					[popup function](<%=fnlink(()=>popup(book.a.b.popup_))%>)
+					
+					[[alert]]
+					
+					[[bad link]]
+
+					::alert
+					<%runAfter(() => alert('alert'))%>
+					
+					[[Start]]
+					
+					:: sub2/sub3///AlternateStart
+					alternate start
+					[[ relativePath -> ../../sub/Passage2]]

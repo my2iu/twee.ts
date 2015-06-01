@@ -1,29 +1,27 @@
 <!doctype html>
 <html>
 	<head>
-		<script src="lib/jquery-1.11.3.min.js"></script>
-		<script src="lib/typescript-1.5beta.js"></script>
-		<script src="lib/marked.js"></script>
-		<script src="lib/loader.js"></script>
+		<script src="jquery-1.11.3.min.js"></script>
+		<script src="typescript-1.5beta.js"></script>
+		<script src="marked.js"></script>
+		<script src="loader.js"></script>
 		
 		<script>
-			importer.importTs('lib/lib.d-1.5beta.ts');
-			importer.importTs('lib/jquery.d.ts');
-			importer.importTs('lib/runtime.ts');
-			importer.importTweeTs('main.twee-ts');
+			importer.importTs('lib.d-1.5beta.ts');
+			importer.importTs('jquery.d.ts');
+			importer.importTs('twee-ts-runtime.ts');
+			importer.importTweeTs('test.twee-ts');
 			
 			// Add other imports here for your actual game code
 		</script>
 
 		<script type="typescript" data-filename="_.ts">
 			// You can put Typescript code for initializing your game
-			// directly here (or in external Typescript files)
 			story.addLoadListener( () => { story.hideLinks = false; } );
 			
 			// It's usually best to stick all your game variables inside
 			// a single object so that it's easy to save and restore it
 			var s = {
-				// Insert your game variables here
 				numTimesAtStart : 0,
 			};
 			
@@ -44,7 +42,7 @@
 				</script>		
 
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<link rel="stylesheet" type="text/css" href="lib/basic.css">
+		<link rel="stylesheet" type="text/css" href="basic.css">
 	</head>
 	<body>
 	<div id="passage">

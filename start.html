@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+	<head>
+		<script src="lib/jquery-1.11.3.min.js"></script>
+		<script src="lib/typescript-1.5beta.js"></script>
+		<script src="lib/marked.js"></script>
+		<script src="lib/loader.js"></script>
+		
+		<script>
+			importer.importTs('lib/lib.d-1.5beta.ts');
+			importer.importTs('lib/jquery.d.ts');
+			importer.importTs('lib/twee-ts-runtime.ts');
+			importer.importTweeTs('main.twee-ts');
+			
+			// Add other imports here for your actual game code
+		</script>
+
+		<script type="typescript" data-filename="_.ts">
+			// You can put Typescript code for initializing your game
+			// directly here (or in external Typescript files)
+			
+			// It's usually best to stick all your game variables inside
+			// a single object so that it's easy to save and restore it
+			var s = {
+				// Insert your game variables here
+			};
+			
+			// Here, you tell Twee.Ts how to save your game's variables. In
+			// this case it's easy since all of your variables are already 
+			// in one place
+			story.registerSaveHandlers(
+				() => { return s; },     // save s
+				(save) => { s = save; }  // restore s from save
+			);
+		</script>
+		
+		<!-- 
+		You can embed your Twee.ts code directly in this web page below or 
+		put them in external files that will be imported at runtime. 
+		-->
+		<script type="twee.ts">
+		</script>		
+
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="stylesheet" type="text/css" href="lib/basic.css">
+	</head>
+	<body>
+	<div id="passage">
+	Loading. Please wait.
+	</div>
+	</body>
+</html>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<project name="Make Twee.Ts Test" basedir=".">
+
+  <target name="Make Twee.Ts Test" description="Creates a test game from the default game template">
+    <copy file="../start.html" tofile="testgame.html" overwrite="true"/>
+  	<replace file="testgame.html" token="lib/" value=""/>
+  	<replace file="testgame.html" token="main.twee-ts" value="test.twee-ts"/>
+  	<replace file="testgame.html" token="// directly here (or in external Typescript files)" value="story.addLoadListener( () => { story.hideLinks = false; } );"/>
+  	<replace file="testgame.html" token="// Insert your game variables here" value="numTimesAtStart : 0,"/>
+  </target>
+</project>
