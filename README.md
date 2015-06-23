@@ -12,5 +12,7 @@ It is inspired by Twine/Twee and its Snowman story format. Unlike Twine/Twee, Tw
 * a passage can "fall through" to another passage, providing an easy mechanism for programmatically deciding how one passage should flow to the next
 * the engine allows you to save and replay transcripts, making testing easier
 
+Instructions about how to use Twee.ts can be found on the [Twee.ts Github wiki](https://github.com/my2iu/twee.ts/wiki).
+
 Note: Twee.ts is still in development, so it is not ready for use yet.
 
