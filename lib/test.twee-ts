@@ -12,6 +12,10 @@
 					<% include(book._3rd_passage); %>
 					:: sub/Passage2
 
+					<% if (visited(book.sub.Passage2) == 1) { %>
+						First visit to this passage
+					<%}%>
+
 					<span class="secondPassageBefore">[[2nd passage->/2nd passage expander]]</span> <span class="secondPassageAfter hidden">The 2nd passage contains a link that when clicked replaces the content with longer content</span> [[/3rd passage]]
 					::2nd passage expander [silent]
 					<% $("#passage .secondPassageBefore").addClass('hidden');

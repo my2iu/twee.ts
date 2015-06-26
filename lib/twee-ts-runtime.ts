@@ -86,7 +86,7 @@ class PassageOutput {
 class Story {
 	startPassageName: string = 'Start';
 	passageMap: { [key:string]:Passage } = {};
-	visitedPassages: { [key:string]:boolean } = {};
+	visitedPassages: { [key:string]:number } = {};
 	currentPassage: Passage = null;
 	previousPassage : Passage = null;
 	hideLinks = true;
@@ -272,7 +272,10 @@ class Story {
 	
 	runPassage(passage: Passage) : PassageOutput 
 	{
-		this.visitedPassages[passage.name] = true;
+		if (!this.visitedPassages[passage.name])
+			this.visitedPassages[passage.name] = 1;
+		else
+			this.visitedPassages[passage.name]++;
 		
 		let output = new PassageOutput();
 		output.copyTagsFrom(passage.tags);
@@ -439,7 +442,7 @@ function previous() : Passage
 	return story.previousPassage;
 }
 
-function visited(passage: Passage) : boolean
+function visited(passage: Passage) : number
 {
 	return story.visitedPassages[passage.name];
 }
