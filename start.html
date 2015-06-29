@@ -18,20 +18,6 @@
 		<script type="typescript" data-filename="_.ts">
 			// You can put Typescript code for initializing your game
 			// directly here (or in external Typescript files)
-			
-			// It's usually best to stick all your game variables inside
-			// a single object so that it's easy to save and restore it
-			var s = {
-				// Insert your game variables here
-			};
-			
-			// Here, you tell Twee.Ts how to save your game's variables. In
-			// this case it's easy since all of your variables are already 
-			// in one place
-			story.registerSaveHandlers(
-				() => { return s; },     // save s
-				(save) => { s = save; }  // restore s from save
-			);
 		</script>
 		
 		<!-- 

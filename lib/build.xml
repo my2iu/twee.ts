@@ -5,7 +5,25 @@
     <copy file="../start.html" tofile="testgame.html" overwrite="true"/>
   	<replace file="testgame.html" token="lib/" value=""/>
   	<replace file="testgame.html" token="main.twee-ts" value="test.twee-ts"/>
-  	<replace file="testgame.html" token="// directly here (or in external Typescript files)" value="story.addLoadListener( () => { story.hideLinks = false; } );"/>
-  	<replace file="testgame.html" token="// Insert your game variables here" value="numTimesAtStart : 0,"/>
+  	<replace file="testgame.html" token="// directly here (or in external Typescript files)">
+  		<replacevalue>
+  			story.addLoadListener( () => { story.hideLinks = false; } );
+  			
+			// It's usually best to stick all your game variables inside
+			// a single object so that it's easy to save and restore it
+			var s = {
+  		  		// Insert your game variables here
+  				numTimesAtStart : 0,
+			};
+			
+			// Here, you tell Twee.Ts how to save your game's variables. In
+			// this case it's easy since all of your variables are already 
+			// in one place
+			story.registerSaveHandlers(
+				() => { return s; },     // save s
+				(save) => { s = save; }  // restore s from save
+			);
+	  	</replacevalue>
+	</replace>
   </target>
 </project>

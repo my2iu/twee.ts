@@ -17,12 +17,14 @@
 
 		<script type="typescript" data-filename="_.ts">
 			// You can put Typescript code for initializing your game
-			story.addLoadListener( () => { story.hideLinks = false; } );
 			
+  			story.addLoadListener( () => { story.hideLinks = false; } );
+  			
 			// It's usually best to stick all your game variables inside
 			// a single object so that it's easy to save and restore it
 			var s = {
-				numTimesAtStart : 0,
+  		  		// Insert your game variables here
+  				numTimesAtStart : 0,
 			};
 			
 			// Here, you tell Twee.Ts how to save your game's variables. In
@@ -32,6 +34,7 @@
 				() => { return s; },     // save s
 				(save) => { s = save; }  // restore s from save
 			);
+	  	
 		</script>
 		
 		<!-- 
@@ -39,7 +42,7 @@
 		put them in external files that will be imported at runtime. 
 		-->
 		<script type="twee.ts">
-				</script>		
+		</script>		
 
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<link rel="stylesheet" type="text/css" href="basic.css">
