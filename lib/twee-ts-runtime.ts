@@ -92,6 +92,7 @@ class Story {
 	hideLinks = true;
 	ignoreBadLinks = false;
 	allowUndo = true;
+	allowSaves = true;
 	loadListeners : Array<()=> void> = [];
 	
 	displayOutputHandlers : Array<(markdown: PassageOutput) => boolean> = [];
@@ -401,12 +402,33 @@ window.onpopstate = (evt) => {
 
 class FileMenu
 {
+	/**
+	 * Shows the file menu bar
+	 */
 	show() {
 		$('.filemenuHolder').css('display', 'block');
 	}
+	/**
+	 * Hides the file menu bar
+	 */
 	hide() {
 		$('.filemenuHolder').css('display', 'none');
 	}
+	/**
+	 * Gets the stored save game data from local storage
+	 */
+	getSaves() {
+		return JSON.parse(window.localStorage.getItem(window.location.toString()));
+	}
+	/**
+	 * Stores save game data into local storage
+	 */
+	putSaves(gameStore) {
+		window.localStorage.setItem(window.location.toString(), JSON.stringify(gameStore));
+	}
+	/**
+	 * Creates a top-level file menu in the menu bar
+	 */
 	fillWithFileMenu() {
 		$('#filemenu').html('<a class="loadLink" href="javascript:void(0)">Load...</a> <a class="saveLink" href="javascript:void(0)">Save...</a>');
 		$('#filemenu .loadLink').click((evt) => {
@@ -418,6 +440,9 @@ class FileMenu
 			evt.preventDefault();
 		});
 	}
+	/**
+	 * Creates a back-link and title in the menu bar (additional contents can be appended by others)
+	 */
 	fillWithBackLink(title: string) {
 		// Back button
 		$('#filemenu').html(`<div><a class="fileMenuTopLink" href="javascript:void(0)">Back</a> <b>${title}</b></div><hr>`);
@@ -426,6 +451,9 @@ class FileMenu
 			evt.preventDefault();
 		});
 	}
+	/**
+	 * Creates a Load window in the menu bar area
+	 */
 	fillWithLoadMenu() {
 		// Back button
 		this.fillWithBackLink('Load');
@@ -438,6 +466,10 @@ class FileMenu
 			};
 		});
 	}
+	/**
+	 * Appends a list of saved games to the menu area. You must supply a handler generator
+	 * that generates an event handler for when a saved game is clicked on
+	 */
 	showSavedGameList(clickHandler: (idx) => (evt) => void) {
 		let gameStore = this.getSaves();
 		if (!gameStore || gameStore.saves == null) {
@@ -450,17 +482,16 @@ class FileMenu
 				saveHtml.click(clickHandler(n));
 			}
 		}
-		
 	}
+	/**
+	 * Creates a button for a saved game in the saved game list.
+	 */
 	createSavedGameButton(text : string) : JQuery {
 		return $(`<a href="javascript:void(0)"><div>${text}</div></a>`);
 	}
-	getSaves() {
-		return JSON.parse(window.localStorage.getItem(window.location.toString()));
-	}
-	putSaves(gameStore) {
-		window.localStorage.setItem(window.location.toString(), JSON.stringify(gameStore));
-	}
+	/**
+	 * Creates a Save window in the menu bar area
+	 */
 	fillWithSaveMenu() {
 		// Back button
 		this.fillWithBackLink('Save');
@@ -471,9 +502,10 @@ class FileMenu
 
 		let newSaveHtml = this.createSavedGameButton('New Save');
 		newSaveHtml.click((evt) => {
-			gameStore.saves.push({ name: 'save', save: story.lastValidCheckpoint });
-			this.putSaves(gameStore);
-			this.fillWithFileMenu();
+			this.fillWithFileName('save', (filename: string) => {
+				gameStore.saves.push({ name: filename, save: story.lastValidCheckpoint });
+				this.putSaves(gameStore);
+			});
 			evt.preventDefault();
 		});
 		$('#filemenu').append(newSaveHtml);
@@ -482,8 +514,23 @@ class FileMenu
 		if (!gameStore.saves) {
 			$('#filemenu').append('<div>No saved games</div>');
 		}
+	}
+	/**
+	 * Creates a request for a saved file name in the menu bar area
+	 */
+	fillWithFileName(defaultName: string, saveAction: (string) => void) {
+		// Back button
+		this.fillWithBackLink('Choose Name');
 		
-		//$('#filemenu').append('<div><a class="fileMenuTopLink" href="javascript:void(0)">Back</a></div>');
+		let nameForm = $('<form><input></form>')
+		$('input', nameForm).val(defaultName);
+		nameForm.submit((evt) => {
+			saveAction($('input', nameForm).val());
+			// TODO: Show some temporary status message acknowledging that the file was saved
+			this.fillWithFileMenu();
+			evt.preventDefault();
+		});
+		$('#filemenu').append(nameForm);
 	}
 }
 var fileMenu = new FileMenu();
@@ -498,7 +545,8 @@ function startGame() : void
 	}
 
 	// Setup the file menu
-//	fileMenu.show();
+	if (story.allowSaves)
+		fileMenu.show();
 	fileMenu.fillWithFileMenu();
 	
 	// Show any bad links found
