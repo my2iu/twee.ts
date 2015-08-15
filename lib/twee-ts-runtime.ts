@@ -399,6 +399,95 @@ window.onpopstate = (evt) => {
 	story.restoreCheckpoint(evt.state);
 }
 
+class FileMenu
+{
+	show() {
+		$('.filemenuHolder').css('display', 'block');
+	}
+	hide() {
+		$('.filemenuHolder').css('display', 'none');
+	}
+	fillWithFileMenu() {
+		$('#filemenu').html('<a class="loadLink" href="javascript:void(0)">Load...</a> <a class="saveLink" href="javascript:void(0)">Save...</a>');
+		$('#filemenu .loadLink').click((evt) => {
+			this.fillWithLoadMenu();
+			evt.preventDefault();
+		});
+		$('#filemenu .saveLink').click((evt) => {
+			this.fillWithSaveMenu();
+			evt.preventDefault();
+		});
+	}
+	fillWithBackLink(title: string) {
+		// Back button
+		$('#filemenu').html(`<div><a class="fileMenuTopLink" href="javascript:void(0)">Back</a> <b>${title}</b></div><hr>`);
+		$('.fileMenuTopLink').click((evt) => {
+			this.fillWithFileMenu();
+			evt.preventDefault();
+		});
+	}
+	fillWithLoadMenu() {
+		// Back button
+		this.fillWithBackLink('Load');
+		
+		// Check for any existing saved games
+		this.showSavedGameList((idx) => {
+			return (evt) => {
+				story.restoreCheckpoint(this.getSaves().saves[idx].save);
+				this.fillWithFileMenu();
+			};
+		});
+	}
+	showSavedGameList(clickHandler: (idx) => (evt) => void) {
+		let gameStore = this.getSaves();
+		if (!gameStore || gameStore.saves == null) {
+			$('#filemenu').append('<div>No saved games</div>');
+		} else {
+			for (let n = gameStore.saves.length - 1; n >= 0; n--) {
+				let save = gameStore.saves[n];
+				let saveHtml = this.createSavedGameButton(save.name);
+				$('#filemenu').append(saveHtml);
+				saveHtml.click(clickHandler(n));
+			}
+		}
+		
+	}
+	createSavedGameButton(text : string) : JQuery {
+		return $(`<a href="javascript:void(0)"><div>${text}</div></a>`);
+	}
+	getSaves() {
+		return JSON.parse(window.localStorage.getItem(window.location.toString()));
+	}
+	putSaves(gameStore) {
+		window.localStorage.setItem(window.location.toString(), JSON.stringify(gameStore));
+	}
+	fillWithSaveMenu() {
+		// Back button
+		this.fillWithBackLink('Save');
+
+		let gameStore = this.getSaves();
+		if (!gameStore)
+			gameStore = { saves:[] };
+
+		let newSaveHtml = this.createSavedGameButton('New Save');
+		newSaveHtml.click((evt) => {
+			gameStore.saves.push({ name: 'save', save: story.lastValidCheckpoint });
+			this.putSaves(gameStore);
+			this.fillWithFileMenu();
+			evt.preventDefault();
+		});
+		$('#filemenu').append(newSaveHtml);
+		
+		// Check for any existing saved games
+		if (!gameStore.saves) {
+			$('#filemenu').append('<div>No saved games</div>');
+		}
+		
+		//$('#filemenu').append('<div><a class="fileMenuTopLink" href="javascript:void(0)">Back</a></div>');
+	}
+}
+var fileMenu = new FileMenu();
+
 function startGame() : void
 {
 	story.init();
@@ -407,6 +496,10 @@ function startGame() : void
 	for (let n = 0; n < story.loadListeners.length; n++) {
 		story.loadListeners[n]();
 	}
+
+	// Setup the file menu
+//	fileMenu.show();
+	fileMenu.fillWithFileMenu();
 	
 	// Show any bad links found
 	let areAllLinksOk = tweeTsHelpers.getBadLinksReport( (text) => {
