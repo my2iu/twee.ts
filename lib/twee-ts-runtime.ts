@@ -467,6 +467,28 @@ class FileMenu
 				};
 			},
 			() => { this.fillWithLoadMenu(); });
+			
+		// Button for loading from disk
+		let loadFromDiskHtml = $('<div><hr><a class="loadFromDiskLink" href="javascript:void(0)">Load from disk</a></div>');
+		$('a.loadFromDiskLink', loadFromDiskHtml).click((evt) => {
+			let loadButton = document.createElement('input');
+			loadButton.type = 'file';
+			loadButton.style.display = 'none';
+			loadButton.addEventListener('change', (evt) => {
+				let files = loadButton.files;
+				if (files.length == 0) return;
+				let reader = new FileReader()
+				reader.addEventListener("loadend", (readEvt) => {
+					story.restoreCheckpoint(reader.result);
+				});
+				reader.readAsText(files[0]);
+				this.fillWithFileMenu();
+			});
+			loadButton.click();
+			evt.preventDefault();
+		});
+		$('#filemenu').append(loadFromDiskHtml);
+
 	}
 	/**
 	 * Appends a list of saved games to the menu area. You must supply a handler generator
@@ -549,6 +571,26 @@ class FileMenu
 				}
 			}, 
 			() => { this.fillWithSaveMenu(); });
+			
+		// Button for saving to disk
+		let saveToDiskHtml = $('<div><hr><a class="saveToDiskLink" href="javascript:void(0)">Save to disk</a></div>');
+		$('a.saveToDiskLink', saveToDiskHtml).click((evt) => {
+			let blob = new Blob([story.lastValidCheckpoint], {type: 'application/x-octet-stream'});
+			this.fillWithFileName('save', (filename: string) => {
+				if (navigator.msSaveBlob) {
+					navigator.msSaveBlob(blob, filename);
+				} else {
+					let saveAnchor:any = document.createElement('a');
+					saveAnchor.href = URL.createObjectURL(blob);
+					// TODO: Cannot release the URL because of Firefox
+					saveAnchor.download = filename;
+					$('#filemenu').append(saveAnchor);
+					saveAnchor.click();
+				}
+			});
+			evt.preventDefault();
+		});
+		$('#filemenu').append(saveToDiskHtml);
 	}
 	/**
 	 * Creates a request for a saved file name in the menu bar area
