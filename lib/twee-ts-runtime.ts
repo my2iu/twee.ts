@@ -459,35 +459,53 @@ class FileMenu
 		this.fillWithBackLink('Load');
 		
 		// Check for any existing saved games
-		this.showSavedGameList((idx) => {
-			return (evt) => {
-				story.restoreCheckpoint(this.getSaves().saves[idx].save);
-				this.fillWithFileMenu();
-			};
-		});
+		this.showSavedGameList(
+			(idx) => {
+				return (evt) => {
+					story.restoreCheckpoint(this.getSaves().saves[idx].save);
+					this.fillWithFileMenu();
+				};
+			},
+			() => { this.fillWithLoadMenu(); });
 	}
 	/**
 	 * Appends a list of saved games to the menu area. You must supply a handler generator
 	 * that generates an event handler for when a saved game is clicked on
 	 */
-	showSavedGameList(clickHandler: (idx) => (evt) => void) {
+	showSavedGameList(clickHandler: (idx) => (evt) => void, reload : () => void) {
 		let gameStore = this.getSaves();
-		if (!gameStore || gameStore.saves == null) {
+		if (!gameStore || gameStore.saves == null || gameStore.saves.length == 0) {
 			$('#filemenu').append('<div>No saved games</div>');
 		} else {
 			for (let n = gameStore.saves.length - 1; n >= 0; n--) {
 				let save = gameStore.saves[n];
-				let saveHtml = this.createSavedGameButton(save.name);
+				let saveHtml = this.createSavedGameButton(save.name, true);
 				$('#filemenu').append(saveHtml);
 				saveHtml.click(clickHandler(n));
+				$('a.deleteSave', saveHtml).click(
+					((idx) => { 
+						return (evt) => {
+							evt.preventDefault();
+							evt.stopPropagation();
+							let isOk = confirm("Delete save?");
+							if (!isOk) return;
+							gameStore.saves.splice(idx, 1);
+							this.putSaves(gameStore);
+							reload();
+						}
+					})(n));
 			}
 		}
 	}
 	/**
 	 * Creates a button for a saved game in the saved game list.
 	 */
-	createSavedGameButton(text : string) : JQuery {
-		return $(`<a href="javascript:void(0)"><div>${text}</div></a>`);
+	createSavedGameButton(text : string, withDelete : boolean) : JQuery {
+		if (withDelete) {
+			return $(`<a href="javascript:void(0)"><div>${text} <a href="javascript:void(0)" class="deleteSave">\u274c</a></div></a>`);
+		} else {
+			return $(`<a href="javascript:void(0)"><div>${text}</div></a>`);
+		}
 	}
 	/**
 	 * Creates a Save window in the menu bar area
@@ -496,11 +514,16 @@ class FileMenu
 		// Back button
 		this.fillWithBackLink('Save');
 
+		if (story.lastValidCheckpoint == null) {
+			$('#filemenu').append('<div>Nothing to save</div>');
+			return;
+		}
+		
 		let gameStore = this.getSaves();
 		if (!gameStore)
 			gameStore = { saves:[] };
 
-		let newSaveHtml = this.createSavedGameButton('New Save');
+		let newSaveHtml = this.createSavedGameButton('New Save', false);
 		newSaveHtml.click((evt) => {
 			this.fillWithFileName('save', (filename: string) => {
 				gameStore.saves.push({ name: filename, save: story.lastValidCheckpoint });
@@ -511,9 +534,21 @@ class FileMenu
 		$('#filemenu').append(newSaveHtml);
 		
 		// Check for any existing saved games
-		if (!gameStore.saves) {
-			$('#filemenu').append('<div>No saved games</div>');
-		}
+		this.showSavedGameList(
+			(idx) => {
+				return (evt) => {
+					this.fillWithFileName(gameStore.saves[idx].name, (filename: string) => {
+						// Overwrite the save at that index
+						let isOk = confirm("Overwrite Save?");
+						if (isOk) {
+							gameStore.saves[idx] = { name: filename, save: story.lastValidCheckpoint };
+							this.putSaves(gameStore);
+						}
+					});
+					evt.preventDefault();
+				}
+			}, 
+			() => { this.fillWithSaveMenu(); });
 	}
 	/**
 	 * Creates a request for a saved file name in the menu bar area
@@ -522,14 +557,16 @@ class FileMenu
 		// Back button
 		this.fillWithBackLink('Choose Name');
 		
-		let nameForm = $('<form><input></form>')
-		$('input', nameForm).val(defaultName);
-		nameForm.submit((evt) => {
+		let nameForm = $('<form><input> <a href="javascript:void(0)">Ok</a></form>');
+		let doSave = ((evt) => {
 			saveAction($('input', nameForm).val());
 			// TODO: Show some temporary status message acknowledging that the file was saved
 			this.fillWithFileMenu();
 			evt.preventDefault();
 		});
+		$('input', nameForm).val(defaultName);
+		nameForm.submit(doSave);
+		$('a', nameForm).click(doSave);
 		$('#filemenu').append(nameForm);
 	}
 }
